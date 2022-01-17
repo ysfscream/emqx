@@ -90,9 +90,9 @@ jobs:
       with:
         name: ubuntu20.04
         path: /tmp
-    - name: Download emqx package
-      run: |
-        sudo cp /tmp/emqx /tmp/emqx
+#    - name: Download emqx package
+#      run: |
+#        sudo cp /tmp/emqx /tmp/emqx
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:

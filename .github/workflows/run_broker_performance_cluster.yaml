@@ -73,7 +73,7 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.os }}
-        path: _packages/${{ matrix.profile}}/*.zip
+        path: _packages/${{ matrix.profile}}/*.tar.gz
 
   terraform_emqx:
     runs-on: ubuntu-latest
@@ -92,7 +92,7 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        sudo cp /tmp/emqx-5.*.zip /tmp/emqx.zip
+        sudo cp /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
         ls -alt /tmp/
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
@@ -117,7 +117,7 @@ jobs:
       working-directory: ./tf-test-automation/services/emqx
       id: server_ip
       run: |
-        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.zip"
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.tar.gz"
         echo "::set-output name=emqx_private_ips::$(terraform output emqx_private_ips)"
         echo "::set-output name=emqx_public_ips::$(terraform output emqx_public_ips)"
     - name: Rename and upload emqx tfstate

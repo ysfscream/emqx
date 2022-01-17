@@ -72,8 +72,8 @@ jobs:
         .ci/build_packages/tests.sh "$EMQX_PKG_NAME" pkg
     - uses: actions/upload-artifact@v2
       with:
-        name: ${{ matrix.profile}}-${{ matrix.otp }}-${{ matrix.os }}
-        path: _packages/${{ matrix.profile}}/*.zip
+        name: ${{ matrix.os }}
+        path: _packages/${{ matrix.profile}}/*.tar.gz
 
   terraform_emqx:
     runs-on: ubuntu-latest

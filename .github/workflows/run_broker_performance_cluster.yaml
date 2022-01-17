@@ -93,7 +93,6 @@ jobs:
     - name: Download emqx package
       run: |
         sudo cp /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
-        tar -zxvf /tmp/emqx.tar.gz
         ls -alt /tmp/
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2

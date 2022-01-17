@@ -92,7 +92,7 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        sudo cp /tmp/*.zip /tmp/emqx.zip
+        sudo cp /tmp/emqx /tmp/emqx
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:
@@ -116,7 +116,7 @@ jobs:
       working-directory: ./tf-test-automation/services/emqx
       id: server_ip
       run: |
-        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.zip"
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx"
         echo "::set-output name=emqx_private_ips::$(terraform output emqx_private_ips)"
         echo "::set-output name=emqx_public_ips::$(terraform output emqx_public_ips)"
     - name: Rename and upload emqx tfstate

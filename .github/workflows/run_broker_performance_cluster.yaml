@@ -92,7 +92,7 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        sudo cp /tmp/emqx/*.zip /tmp/emqx.zip
+        sudo cp /tmp/*.zip /tmp/emqx.zip
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:

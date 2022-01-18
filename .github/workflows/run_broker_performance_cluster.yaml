@@ -89,11 +89,11 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         name: ubuntu20.04
-        path: /tmp
+        path: /home/ubuntu
     - name: Download emqx package
       run: |
-        sudo cp /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
-        ls /tmp/
+        sudo cp /home/ubuntu/emqx-5.*.tar.gz /home/ubuntu/emqx.tar.gz
+        ls /home/ubuntu
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:

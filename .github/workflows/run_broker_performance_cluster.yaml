@@ -89,11 +89,11 @@ jobs:
     - uses: actions/download-artifact@v2
       with:
         name: ubuntu20.04
-        path: /home/ubuntu
+        path: /tmp
     - name: Download emqx package
       run: |
-        sudo cp /home/ubuntu/emqx-5.*.tar.gz /home/ubuntu/emqx.tar.gz
-        ls /home/ubuntu
+        sudo cp /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
+        ls /tmp
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:
@@ -117,7 +117,7 @@ jobs:
       working-directory: ./tf-test-automation/services/emqx
       id: server_ip
       run: |
-        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/home/ubuntu/emqx.tar.gz"
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.tar.gz"
         echo "::set-output name=emqx_private_ips::$(terraform output emqx_private_ips)"
         echo "::set-output name=emqx_public_ips::$(terraform output emqx_public_ips)"
     - name: Rename and upload emqx tfstate

@@ -430,6 +430,12 @@ jobs:
     - name: install jmeter plugin
       run: |
         wget --no-verbose -O "/opt/jmeter/lib/mysql-connector-java-8.0.16.jar" https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.16/mysql-connector-java-8.0.16.jar
+        wget --no-verbose -O "/opt/jmeter/lib/jedis-3.6.0.jar" https://repo1.maven.org/maven2/redis/clients/jedis/3.6.0/jedis-3.6.0.jar
+        wget --no-verbose -O "/opt/jmeter/lib/postgresql-42.2.18.jar" https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.18/postgresql-42.2.18.jar
+        wget --no-verbose -O "/opt/jmeter/lib/java-jwt-3.16.0.jar" https://repo1.maven.org/maven2/com/auth0/java-jwt/3.16.0/java-jwt-3.16.0.jar
+        wget --no-verbose -O "/opt/jmeter/lib/gmongo-1.5.jar" https://repo1.maven.org/maven2/com/gmongo/gmongo/1.5/gmongo-1.5.jar
+        wget --no-verbose -O "/opt/jmeter/lib/mongo-java-driver-3.12.8.jar" https://repo1.maven.org/maven2/org/mongodb/mongo-java-driver/3.12.8/mongo-java-driver-3.12.8.jar
+        cd /opt/jmeter/lib/ && rm -rf mongo-java-driver-2.11.3.jar
     - name: run jmeter
       working-directory: ./emqx-fvt/broker-performance-test-suite
       run: |
@@ -445,10 +451,10 @@ jobs:
           -Dredis_ip=${{ needs.terraform_redis.outputs.redis_ip }} \
           -Dmongo_ip=${{ needs.terraform_mongo.outputs.mongo_ip }} \
           -Dhttp_ip=${{ needs.terraform_webhook.outputs.webhook_ip }} \
-          -Dxmeter_ip=${{ secrets.XMETER_IP }} \
+          -Dxmeter_ip=$"13.251.133.132" \
           -Dplugins_path="/opt/jmeter/lib/ext" \
-          -Dxmeter_user=${{ secrets.XMETER_USER }} \
-          -Dxmeter_pwd=${{ secrets.XMETER_PWD }} \
+          -Dxmeter_user="xfypp@sina.com" \
+          -Dxmeter_pwd="xfypp@sina.com" \
           -Dscripts_path=".ci/performance-test-suite" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \

@@ -215,7 +215,7 @@ jobs:
       run: |
         echo ${{ steps.mysql_url.outputs.mysql_url }}
         echo ${{ steps.mysql_ip.outputs.mysql_ip }}
-#
+
   terraform_redis:
     runs-on: ubuntu-latest
 
@@ -435,13 +435,12 @@ jobs:
         wget --no-verbose -O "/opt/jmeter/lib/java-jwt-3.16.0.jar" https://repo1.maven.org/maven2/com/auth0/java-jwt/3.16.0/java-jwt-3.16.0.jar
         wget --no-verbose -O "/opt/jmeter/lib/gmongo-1.5.jar" https://repo1.maven.org/maven2/com/gmongo/gmongo/1.5/gmongo-1.5.jar
         wget --no-verbose -O "/opt/jmeter/lib/mongo-java-driver-3.12.8.jar" https://repo1.maven.org/maven2/org/mongodb/mongo-java-driver/3.12.8/mongo-java-driver-3.12.8.jar
-        cd /opt/jmeter/lib/ && rm -rf mongo-java-driver-2.11.3.jar
+        rm -rf /opt/jmeter/lib/mongo-java-driver-2.11.3.jar
     - name: run jmeter
-      working-directory: ./emqx-fvt/broker-performance-test-suite
       run: |
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
-          -t broker_attestation_test.jmx \
+          -t ./emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \
           -Demqx_ip=${{ needs.terraform_emqx.outputs.emqx_public_ip }} \
           -Demqx_private_ip1=${{ needs.terraform_emqx.outputs.emqx_node_ip1 }} \
           -Demqx_private_ip2=${{ needs.terraform_emqx.outputs.emqx_node_ip2 }} \
@@ -455,7 +454,7 @@ jobs:
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user="xfypp@sina.com" \
           -Dxmeter_pwd="xfypp@sina.com" \
-          -Dscripts_path=".ci/performance-test-suite" \
+          -Dscripts_path="./emqx-fvt/broker-performance-test-suite" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \
           -j jmeter_logs/xmeter_process.log

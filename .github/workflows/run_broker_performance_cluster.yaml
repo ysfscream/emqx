@@ -420,6 +420,7 @@ jobs:
       run: |
         pwd
         ls -alt
+        ls -alt ./emqx-fvt/broker-performance-test-suite
     - name: install jmeter
       timeout-minutes: 10
       env:
@@ -444,6 +445,7 @@ jobs:
       run: |
         pwd
         ls -alt
+        ls -alt ./emqx-fvt/broker-performance-test-suite
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
           -t ./emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \

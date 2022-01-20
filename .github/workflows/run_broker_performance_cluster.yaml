@@ -481,7 +481,7 @@ jobs:
       if: always()
       with:
         name: jmeter_logs_report
-        path: ./jmeter_logs
+        path: /opt/jmeter/bi/jmeter_logs
 
 #  terraform_destroy:
 #    runs-on: ubuntu-latest

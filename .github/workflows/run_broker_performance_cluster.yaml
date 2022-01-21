@@ -462,7 +462,7 @@ jobs:
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user="xfypp@sina.com" \
           -Dxmeter_pwd="xfypp@sina.com" \
-          -Dscripts_path="/home/runner/work/emqx/emqx/./emqx-fvt/broker-performance-test-suite" \
+          -Dscripts_path="./emqx-fvt/broker-performance-test-suite/" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \
           -j jmeter_logs/xmeter_process.log

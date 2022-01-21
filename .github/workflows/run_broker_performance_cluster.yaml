@@ -443,9 +443,10 @@ jobs:
         rm -rf /opt/jmeter/lib/mongo-java-driver-2.11.3.jar
     - name: run jmeter
       run: |
-        pwd
-        ls -alt
-        ls -alt ./emqx-fvt/broker-performance-test-suite
+        cd ./emqx-fvt/broker-performance-test-suite
+        pwd && ls -alt
+        cd ../..
+        pwd && ls -alt
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
           -t ./emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \

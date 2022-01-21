@@ -449,7 +449,7 @@ jobs:
         pwd && ls -alt
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
-          -t ./emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \
+          -t /home/runner/work/emqx/emqx/emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \
           -Demqx_ip="13.229.128.86" \
           -Demqx_private_ip1="172.31.220.102" \
           -Demqx_private_ip2="172.31.221.51" \
@@ -463,7 +463,7 @@ jobs:
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user="xfypp@sina.com" \
           -Dxmeter_pwd="xfypp@sina.com" \
-          -Dscripts_path="./emqx-fvt/broker-performance-test-suite/" \
+          -Dscripts_path="/home/runner/work/emqx/emqx/emqx-fvt/broker-performance-test-suite" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \
           -j jmeter_logs/xmeter_process.log
@@ -482,7 +482,7 @@ jobs:
       if: always()
       with:
         name: jmeter_logs_report
-        path: ./jmeter_logs
+        path: /home/runner/work/emqx/emqx/jmeter_logs
 
 #  terraform_destroy:
 #    runs-on: ubuntu-latest

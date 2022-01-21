@@ -457,9 +457,9 @@ jobs:
           -Demqx_private_ip3="172.31.222.62" \
           -Dmysql_ip="tf-broker-mysql.cxbatr04erdz.ap-southeast-1.rds.amazonaws.com" \
           -Dpgsql_ip="tf-broker-pgsql.cxbatr04erdz.ap-southeast-1.rds.amazonaws.com" \
-          -Dredis_ip="172.31.228.226" \
-          -Dmongo_ip="172.31.240.65" \
-          -Dhttp_ip="172.31.255.240" \
+          -Dredis_ip="122.248.210.2236" \
+          -Dmongo_ip="18.141.201.1295" \
+          -Dhttp_ip="13.213.64.109" \
           -Dxmeter_ip=${{ secrets.XMETER_IP }} \
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user=${{ secrets.XMETER_USER }} \

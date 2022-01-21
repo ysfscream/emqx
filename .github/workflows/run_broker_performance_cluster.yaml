@@ -447,6 +447,7 @@ jobs:
         pwd && ls -alt
         cd ../..
         pwd && ls -alt
+        cd /home/runner/work/emqx/emqx
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
           -t /home/runner/work/emqx/emqx/emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \

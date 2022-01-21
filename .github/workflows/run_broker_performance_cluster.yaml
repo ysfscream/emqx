@@ -427,7 +427,7 @@ jobs:
          JMETER_VERSION: 5.3
       run: |
         wget --no-verbose --no-check-certificate -O /tmp/apache-jmeter.tgz https://downloads.apache.org/jmeter/binaries/apache-jmeter-$JMETER_VERSION.tgz
-        cd /tmp && tar -xvf apache-jmeter.tgz
+        tar -xvf /tmp/apache-jmeter.tgz
         echo "jmeter.save.saveservice.output_format=xml" >> /tmp/apache-jmeter-$JMETER_VERSION/user.properties
         echo "jmeter.save.saveservice.response_data.on_error=true" >> /tmp/apache-jmeter-$JMETER_VERSION/user.properties
         wget --no-verbose -O /tmp/apache-jmeter-$JMETER_VERSION/lib/ext/mqtt-xmeter-fuse-2.0.2-jar-with-dependencies.jar https://raw.githubusercontent.com/xmeter-net/mqtt-jmeter/master/Download/v2.0.2/mqtt-xmeter-fuse-2.0.2-jar-with-dependencies.jar
@@ -462,7 +462,7 @@ jobs:
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user="xfypp@sina.com" \
           -Dxmeter_pwd="xfypp@sina.com" \
-          -Dscripts_path="/home/runner/work/emqx/emqx/emqx-fvt/broker-performance-test-suite" \
+          -Dscripts_path="./emqx-fvt/broker-performance-test-suite" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \
           -j jmeter_logs/xmeter_process.log

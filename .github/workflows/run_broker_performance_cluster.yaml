@@ -427,7 +427,7 @@ jobs:
          JMETER_VERSION: 5.3
       run: |
         wget --no-verbose --no-check-certificate -O /tmp/apache-jmeter.tgz https://downloads.apache.org/jmeter/binaries/apache-jmeter-$JMETER_VERSION.tgz
-        tar -xvf /tmp/apache-jmeter.tgz
+        cd /tmp && tar -xvf apache-jmeter.tgz
         echo "jmeter.save.saveservice.output_format=xml" >> /tmp/apache-jmeter-$JMETER_VERSION/user.properties
         echo "jmeter.save.saveservice.response_data.on_error=true" >> /tmp/apache-jmeter-$JMETER_VERSION/user.properties
         wget --no-verbose -O /tmp/apache-jmeter-$JMETER_VERSION/lib/ext/mqtt-xmeter-fuse-2.0.2-jar-with-dependencies.jar https://raw.githubusercontent.com/xmeter-net/mqtt-jmeter/master/Download/v2.0.2/mqtt-xmeter-fuse-2.0.2-jar-with-dependencies.jar
@@ -481,7 +481,7 @@ jobs:
       if: always()
       with:
         name: jmeter_logs_report
-        path: /jmeter_logs
+        path: ./jmeter_logs
 
 #  terraform_destroy:
 #    runs-on: ubuntu-latest

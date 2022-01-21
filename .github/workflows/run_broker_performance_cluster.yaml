@@ -459,10 +459,10 @@ jobs:
           -Dredis_ip="172.31.228.226" \
           -Dmongo_ip="172.31.240.65" \
           -Dhttp_ip="172.31.255.240" \
-          -Dxmeter_ip="13.251.133.132" \
+          -Dxmeter_ip=${{ secrets.XMETER_IP }} \
           -Dplugins_path="/opt/jmeter/lib/ext" \
-          -Dxmeter_user="xfypp@sina.com" \
-          -Dxmeter_pwd="xfypp@sina.com" \
+          -Dxmeter_user=${{ secrets.XMETER_USER }} \
+          -Dxmeter_pwd=${{ secrets.XMETER_PWD }} \
           -Dscripts_path="/home/runner/work/emqx/emqx/emqx-fvt/broker-performance-test-suite" \
           -Dreport_file="jmeter_logs/report.txt" \
           -l jmeter_logs/xmeter_process.jtl \

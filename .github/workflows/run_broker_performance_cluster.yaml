@@ -9,400 +9,388 @@ on:
 #  workflow_dispatch:
 
 jobs:
-#  build:
-#    runs-on: ubuntu-20.04
-#
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        profile:
-#        - emqx
-#        otp:
-#        - 24.1.5-3
-#        os:
-#        - ubuntu20.04
-#
-#    container: "ghcr.io/emqx/emqx-builder/5.0-3:${{ matrix.otp }}-${{ matrix.os }}"
-#
-##    steps:
-##    - uses: actions/checkout@v1
-##    - name: build zip packages
-##      run: make ${{ matrix.profile }}-zip
-##    - name: packages test
-##      run: |
-##        export CODE_PATH=$GITHUB_WORKSPACE
-##        EMQX_NAME=${{ matrix.profile }} .ci/build_packages/tests.sh
-##    - uses: actions/upload-artifact@v2
-##      with:
-##        name: ${{ matrix.os}}
-##        path: _packages/**/*.zip
-#    steps:
-#    - uses: actions/checkout@v1
-#    - name: prepare
-#      run: |
-#        echo "EMQX_NAME=${{ matrix.profile }}" >> $GITHUB_ENV
-#        echo "CODE_PATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-#        echo "EMQX_PKG_NAME=${{ matrix.profile }}-$(./pkg-vsn.sh)-otp${{ matrix.otp }}-${{ matrix.os }}-amd64" >> $GITHUB_ENV
-#    - name: Get deps git refs for cache
-#      id: deps-refs
-#      run: |
-#        scripts/get-dep-refs.sh
-#        make clean-all
-#    - name: load rocksdb cache
-#      uses: actions/cache@v2
-#      with:
-#        path: _build/default/lib/rocksdb/
-#        key: ${{ matrix.os }}-${{ matrix.otp }}-amd64-${{ steps.deps-refs.outputs.DEP_ROCKSDB_REF }}
-#    - name: load quicer cache
-#      uses: actions/cache@v2
-#      with:
-#        path: _build/default/lib/quicer/
-#        key: ${{ matrix.os }}-${{ matrix.otp }}-amd64-${{ steps.deps-refs.outputs.DEP_QUICER_REF }}
-#    - name: build and test tgz package
-#      run: |
-#        make ${EMQX_NAME}-tgz
-#        .ci/build_packages/tests.sh "$EMQX_PKG_NAME" tgz
-#    - name: run static checks
-#      if: contains(matrix.os, 'ubuntu')
-#      run: |
-#        make static_checks
-#    - name: build and test deb/rpm packages
-#      run: |
-#        make ${EMQX_NAME}-pkg
-#        .ci/build_packages/tests.sh "$EMQX_PKG_NAME" pkg
-#    - uses: actions/upload-artifact@v2
-#      with:
-#        name: ${{ matrix.os }}
-#        path: _packages/${{ matrix.profile}}/*.tar.gz
-#
-#  terraform_emqx:
-#    runs-on: ubuntu-latest
-#
-#    needs: [build]
-#    outputs:
-#      emqx_public_ip: ${{ steps.emqx_private_ip.outputs.emqx_public_ip }}
-#      emqx_node_ip1: ${{ steps.emqx_private_ip.outputs.emqx_node_ip1 }}
-#      emqx_node_ip2: ${{ steps.emqx_private_ip.outputs.emqx_node_ip2 }}
-#      emqx_node_ip3: ${{ steps.emqx_private_ip.outputs.emqx_node_ip3 }}
-#    steps:
-#    - uses: actions/checkout@v2
-#    - uses: actions/download-artifact@v2
-#      with:
-#        name: ubuntu20.04
-#        path: /tmp
-#    - name: Download emqx package
-#      run: |
-#        mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
-#        ls /tmp
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/emqx
-#      id: init1
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/emqx
-#      id: validate1
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/emqx
-#      id: server_ip
-#      run: |
-#        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.tar.gz"
-#        echo "::set-output name=emqx_private_ips::$(terraform output emqx_private_ips)"
-#        echo "::set-output name=emqx_public_ips::$(terraform output emqx_public_ips)"
-#    - name: Rename and upload emqx tfstate
-#      working-directory: ./tf-test-automation/services/emqx
-#      run: |
-#        mv ./terraform.tfstate ./emqx.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/emqx/emqx.tfstate
-#    - name: Show emqx_private_ips
-#      id: emqx_private_ip
-#      run: |
-#        ip1=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $1}'`
-#        ip2=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $2}'`
-#        ip3=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $3}'`
-#        emqx_public_ip=`echo "${{ steps.server_ip.outputs.emqx_public_ips }}"|awk -F ',' '{print $1}'`
-#        echo "::set-output name=emqx_node_ip1::$ip1"
-#        echo "::set-output name=emqx_node_ip2::$ip2"
-#        echo "::set-output name=emqx_node_ip3::$ip3"
-#        echo "::set-output name=emqx_public_ip::$emqx_public_ip"
-#    - name: Show emqx node ip
-#      run: |
-#        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip1 }}
-#        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip2 }}
-#        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip3 }}
-#        echo ${{ steps.emqx_private_ip.outputs.emqx_public_ip }}
-#
-#  xmeter_start:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#    - name: Configure AWS Credentials
-#      uses: aws-actions/configure-aws-credentials@v1
-#      with:
-#        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}
-#        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}
-#        aws-region: ap-southeast-1
-#    - name: Start Xmeter Services
-#      run: |
-#        aws ec2 start-instances --instance-ids i-0dd6d99916baaa1a8
-#        aws ec2 start-instances --instance-ids i-05222103df01eb2d7
-#        sleep 40;
-#        aws ec2 start-instances --instance-ids i-0c5dccd394ed9be18
-#        aws ec2 start-instances --instance-ids i-04c1c50b3e4952266
-#
-#  terraform_mysql:
-#    runs-on: ubuntu-latest
-#
-#    outputs:
-#      mysql_ip: ${{ steps.mysql_ip.outputs.mysql_ip }}
-#      mysql_url: ${{ steps.mysql_url.outputs.mysql_url }}
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/mysql
-#      id: init1
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/mysql
-#      id: validate1
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/mysql
-#      id: mysql_url
-#      run: |
-#        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#        echo "::set-output name=mysql_url::$(terraform output endpoint)"
-#    - name: Rename and upload mysql tfstate
-#      working-directory: ./tf-test-automation/services/mysql
-#      run: |
-#        mv ./terraform.tfstate ./mysql.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/mysql/mysql.tfstate
-#    - name: Show mysql url
-#      id: mysql_ip
-#      run: |
-#        ip=`echo "${{ steps.mysql_url.outputs.mysql_url }}"|awk -F ':' '{print $1}'`
-#        echo "::set-output name=mysql_ip::$ip"
-#    - name: Show mysql ip
-#      run: |
-#        echo ${{ steps.mysql_url.outputs.mysql_url }}
-#        echo ${{ steps.mysql_ip.outputs.mysql_ip }}
-#
-#  terraform_redis:
-#    runs-on: ubuntu-latest
-#
-#    outputs:
-#      redis_ip: ${{ steps.redis_ip.outputs.redis_ip }}
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/redis
-#      id: init
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/redis
-#      id: validate
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/redis
-#      id: redis_ip
-#      run: |
-#        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-#        echo "::set-output name=redis_ip::$(terraform output redis_private_ips)"
-#    - name: Rename and upload redis server tfstate
-#      working-directory: ./tf-test-automation/services/redis
-#      run: |
-#        mv ./terraform.tfstate ./redis.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/redis/redis.tfstate
-#    - name: Show redis ip
-#      run: |
-#        echo ${{ steps.redis_ip.outputs.redis_ip }}
-#
-#  terraform_pgsql:
-#    runs-on: ubuntu-latest
-#
-#    outputs:
-#      pgsql_url: ${{ steps.pgsql_url.outputs.pgsql_url }}
-#      pgsql_ip: ${{ steps.pgsql_ip.outputs.pgsql_ip }}
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/pgsql
-#      id: init
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/pgsql
-#      id: validate
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/pgsql
-#      id: pgsql_url
-#      run: |
-#        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#        echo "::set-output name=pgsql_url::$(terraform output endpoint)"
-#    - name: Rename and upload pgsql server tfstate
-#      working-directory: ./tf-test-automation/services/pgsql
-#      run: |
-#        mv ./terraform.tfstate ./pgsql.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/pgsql/pgsql.tfstate
-#    - name: Show pgsql url
-#      id: pgsql_ip
-#      run: |
-#        ip=`echo "${{ steps.pgsql_url.outputs.pgsql_url }}"|awk -F ':' '{print $1}'`
-#        echo "::set-output name=pgsql_ip::$ip"
-#    - name: Show pgsql ip
-#      run: |
-#        echo ${{ steps.pgsql_url.outputs.pgsql_url }}
-#        echo ${{ steps.pgsql_ip.outputs.pgsql_ip }}
-#
-#  terraform_mongo:
-#    runs-on: ubuntu-latest
-#
-#    outputs:
-#      mongo_ip: ${{ steps.mongo_ip.outputs.mongo_ip }}
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/mongodb
-#      id: init
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/mongodb
-#      id: validate
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/mongodb
-#      id: mongo_ip
-#      run: |
-#        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-#        echo "::set-output name=mongo_ip::$(terraform output mongo_private_ips)"
-#    - name: Rename and upload mongo server tfstate
-#      working-directory: ./tf-test-automation/services/mongodb
-#      run: |
-#        mv ./terraform.tfstate ./mongo.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/mongodb/mongo.tfstate
-#    - name: Show mongo ip
-#      run: |
-#        echo ${{ steps.mongo_ip.outputs.mongo_ip }}
-#
-#  terraform_webhook:
-#    runs-on: ubuntu-latest
-#
-#    outputs:
-#      webhook_ip: ${{ steps.webhook_ip.outputs.webhook_ip }}
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: emqx-broker
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - name: Terraform Init tf-test-automation
-#      working-directory: ./tf-test-automation/services/webhook
-#      id: init
-#      run: |
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Validate tf-test-automation
-#      working-directory: ./tf-test-automation/services/webhook
-#      id: validate
-#      run: terraform validate -no-color
-#    - name: Terraform Apply tf-test-automation
-#      working-directory: ./tf-test-automation/services/webhook
-#      id: webhook_ip
-#      run: |
-#        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-#        echo "::set-output name=webhook_ip::$(terraform output webhook_private_ips)"
-#    - name: Rename and upload webhook server tfstate
-#      working-directory: ./tf-test-automation/services/webhook
-#      run: |
-#        mv ./terraform.tfstate ./webhook.tfstate
-#    - uses: actions/upload-artifact@v2
-#      if: always()
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services/webhook/webhook.tfstate
-#    - name: Show webhook ip
-#      run: |
-#        echo ${{ steps.webhook_ip.outputs.webhook_ip }}
+  build:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+        - emqx
+        otp:
+        - 24.1.5-3
+        os:
+        - ubuntu20.04
+
+    container: "ghcr.io/emqx/emqx-builder/5.0-3:${{ matrix.otp }}-${{ matrix.os }}"
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: prepare
+      run: |
+        echo "EMQX_NAME=${{ matrix.profile }}" >> $GITHUB_ENV
+        echo "CODE_PATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "EMQX_PKG_NAME=${{ matrix.profile }}-$(./pkg-vsn.sh)-otp${{ matrix.otp }}-${{ matrix.os }}-amd64" >> $GITHUB_ENV
+    - name: Get deps git refs for cache
+      id: deps-refs
+      run: |
+        scripts/get-dep-refs.sh
+        make clean-all
+    - name: load rocksdb cache
+      uses: actions/cache@v2
+      with:
+        path: _build/default/lib/rocksdb/
+        key: ${{ matrix.os }}-${{ matrix.otp }}-amd64-${{ steps.deps-refs.outputs.DEP_ROCKSDB_REF }}
+    - name: load quicer cache
+      uses: actions/cache@v2
+      with:
+        path: _build/default/lib/quicer/
+        key: ${{ matrix.os }}-${{ matrix.otp }}-amd64-${{ steps.deps-refs.outputs.DEP_QUICER_REF }}
+    - name: build and test tgz package
+      run: |
+        make ${EMQX_NAME}-tgz
+        .ci/build_packages/tests.sh "$EMQX_PKG_NAME" tgz
+    - name: run static checks
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        make static_checks
+    - name: build and test deb/rpm packages
+      run: |
+        make ${EMQX_NAME}-pkg
+        .ci/build_packages/tests.sh "$EMQX_PKG_NAME" pkg
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.os }}
+        path: _packages/${{ matrix.profile}}/*.tar.gz
+
+  terraform_emqx:
+    runs-on: ubuntu-latest
+
+    needs: [build]
+    outputs:
+      emqx_public_ip: ${{ steps.emqx_private_ip.outputs.emqx_public_ip }}
+      emqx_node_ip1: ${{ steps.emqx_private_ip.outputs.emqx_node_ip1 }}
+      emqx_node_ip2: ${{ steps.emqx_private_ip.outputs.emqx_node_ip2 }}
+      emqx_node_ip3: ${{ steps.emqx_private_ip.outputs.emqx_node_ip3 }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/download-artifact@v2
+      with:
+        name: ubuntu20.04
+        path: /tmp
+    - name: Download emqx package
+      run: |
+        mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
+        ls /tmp
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/emqx
+      id: init1
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/emqx
+      id: validate1
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/emqx
+      id: server_ip
+      run: |
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}" -var="emqx_package=/tmp/emqx.tar.gz"
+        echo "::set-output name=emqx_private_ips::$(terraform output emqx_private_ips)"
+        echo "::set-output name=emqx_public_ips::$(terraform output emqx_public_ips)"
+    - name: Rename and upload emqx tfstate
+      working-directory: ./tf-test-automation/services/emqx
+      run: |
+        mv ./terraform.tfstate ./emqx.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/emqx/emqx.tfstate
+    - name: Show emqx_private_ips
+      id: emqx_private_ip
+      run: |
+        ip1=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $1}'`
+        ip2=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $2}'`
+        ip3=`echo "${{ steps.server_ip.outputs.emqx_private_ips }}"|awk -F ',' '{print $3}'`
+        emqx_public_ip=`echo "${{ steps.server_ip.outputs.emqx_public_ips }}"|awk -F ',' '{print $1}'`
+        echo "::set-output name=emqx_node_ip1::$ip1"
+        echo "::set-output name=emqx_node_ip2::$ip2"
+        echo "::set-output name=emqx_node_ip3::$ip3"
+        echo "::set-output name=emqx_public_ip::$emqx_public_ip"
+    - name: Show emqx node ip
+      run: |
+        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip1 }}
+        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip2 }}
+        echo ${{ steps.emqx_private_ip.outputs.emqx_node_ip3 }}
+        echo ${{ steps.emqx_private_ip.outputs.emqx_public_ip }}
+
+  xmeter_start:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}
+        aws-region: ap-southeast-1
+    - name: Start Xmeter Services
+      run: |
+        aws ec2 start-instances --instance-ids i-0dd6d99916baaa1a8
+        aws ec2 start-instances --instance-ids i-05222103df01eb2d7
+        sleep 40;
+        aws ec2 start-instances --instance-ids i-0c5dccd394ed9be18
+        aws ec2 start-instances --instance-ids i-04c1c50b3e4952266
+
+  terraform_mysql:
+    runs-on: ubuntu-latest
+
+    outputs:
+      mysql_ip: ${{ steps.mysql_ip.outputs.mysql_ip }}
+      mysql_url: ${{ steps.mysql_url.outputs.mysql_url }}
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/mysql
+      id: init1
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/mysql
+      id: validate1
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/mysql
+      id: mysql_url
+      run: |
+        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+        echo "::set-output name=mysql_url::$(terraform output endpoint)"
+    - name: Rename and upload mysql tfstate
+      working-directory: ./tf-test-automation/services/mysql
+      run: |
+        mv ./terraform.tfstate ./mysql.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/mysql/mysql.tfstate
+    - name: Show mysql url
+      id: mysql_ip
+      run: |
+        ip=`echo "${{ steps.mysql_url.outputs.mysql_url }}"|awk -F ':' '{print $1}'`
+        echo "::set-output name=mysql_ip::$ip"
+    - name: Show mysql ip
+      run: |
+        echo ${{ steps.mysql_url.outputs.mysql_url }}
+        echo ${{ steps.mysql_ip.outputs.mysql_ip }}
+
+  terraform_redis:
+    runs-on: ubuntu-latest
+
+    outputs:
+      redis_ip: ${{ steps.redis_ip.outputs.redis_ip }}
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/redis
+      id: init
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/redis
+      id: validate
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/redis
+      id: redis_ip
+      run: |
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
+        echo "::set-output name=redis_ip::$(terraform output redis_private_ips)"
+    - name: Rename and upload redis server tfstate
+      working-directory: ./tf-test-automation/services/redis
+      run: |
+        mv ./terraform.tfstate ./redis.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/redis/redis.tfstate
+    - name: Show redis ip
+      run: |
+        echo ${{ steps.redis_ip.outputs.redis_ip }}
+
+  terraform_pgsql:
+    runs-on: ubuntu-latest
+
+    outputs:
+      pgsql_url: ${{ steps.pgsql_url.outputs.pgsql_url }}
+      pgsql_ip: ${{ steps.pgsql_ip.outputs.pgsql_ip }}
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/pgsql
+      id: init
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/pgsql
+      id: validate
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/pgsql
+      id: pgsql_url
+      run: |
+        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+        echo "::set-output name=pgsql_url::$(terraform output endpoint)"
+    - name: Rename and upload pgsql server tfstate
+      working-directory: ./tf-test-automation/services/pgsql
+      run: |
+        mv ./terraform.tfstate ./pgsql.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/pgsql/pgsql.tfstate
+    - name: Show pgsql url
+      id: pgsql_ip
+      run: |
+        ip=`echo "${{ steps.pgsql_url.outputs.pgsql_url }}"|awk -F ':' '{print $1}'`
+        echo "::set-output name=pgsql_ip::$ip"
+    - name: Show pgsql ip
+      run: |
+        echo ${{ steps.pgsql_url.outputs.pgsql_url }}
+        echo ${{ steps.pgsql_ip.outputs.pgsql_ip }}
+
+  terraform_mongo:
+    runs-on: ubuntu-latest
+
+    outputs:
+      mongo_ip: ${{ steps.mongo_ip.outputs.mongo_ip }}
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/mongodb
+      id: init
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/mongodb
+      id: validate
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/mongodb
+      id: mongo_ip
+      run: |
+        terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
+        echo "::set-output name=mongo_ip::$(terraform output mongo_private_ips)"
+    - name: Rename and upload mongo server tfstate
+      working-directory: ./tf-test-automation/services/mongodb
+      run: |
+        mv ./terraform.tfstate ./mongo.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/mongodb/mongo.tfstate
+    - name: Show mongo ip
+      run: |
+        echo ${{ steps.mongo_ip.outputs.mongo_ip }}
+
+  terraform_webhook:
+    runs-on: ubuntu-latest
+
+    outputs:
+      webhook_ip: ${{ steps.webhook_ip.outputs.webhook_ip }}
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: emqx-broker
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - name: Terraform Init tf-test-automation
+      working-directory: ./tf-test-automation/services/webhook
+      id: init
+      run: |
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Validate tf-test-automation
+      working-directory: ./tf-test-automation/services/webhook
+      id: validate
+      run: terraform validate -no-color
+    - name: Terraform Apply tf-test-automation
+      working-directory: ./tf-test-automation/services/webhook
+      id: webhook_ip
+      run: |
+        terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
+        echo "::set-output name=webhook_ip::$(terraform output webhook_private_ips)"
+    - name: Rename and upload webhook server tfstate
+      working-directory: ./tf-test-automation/services/webhook
+      run: |
+        mv ./terraform.tfstate ./webhook.tfstate
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services/webhook/webhook.tfstate
+    - name: Show webhook ip
+      run: |
+        echo ${{ steps.webhook_ip.outputs.webhook_ip }}
 
   master_control:
     runs-on: ubuntu-latest
 
-#    needs: [xmeter_start, terraform_emqx, terraform_mysql, terraform_redis, terraform_pgsql, terraform_mongo, terraform_webhook]
+    needs: [xmeter_start, terraform_emqx, terraform_mysql, terraform_redis, terraform_pgsql, terraform_mongo, terraform_webhook]
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v1
@@ -441,15 +429,15 @@ jobs:
         /opt/jmeter/bin/jmeter.sh \
           -Jjmeter.save.saveservice.output_format=xml -n \
           -t ./emqx-fvt/broker-performance-test-suite/broker_attestation_test.jmx \
-          -Demqx_ip="13.229.128.86" \
-          -Demqx_private_ip1="172.31.220.102" \
-          -Demqx_private_ip2="172.31.221.51" \
-          -Demqx_private_ip3="172.31.222.62" \
-          -Dmysql_ip="tf-broker-mysql.cxbatr04erdz.ap-southeast-1.rds.amazonaws.com" \
-          -Dpgsql_ip="tf-broker-pgsql.cxbatr04erdz.ap-southeast-1.rds.amazonaws.com" \
-          -Dredis_ip="122.248.210.223" \
-          -Dmongo_ip="18.141.201.129" \
-          -Dhttp_ip="13.213.64.109" \
+          -Demqx_ip=${{ needs.terraform_emqx.outputs.emqx_public_ip }} \
+          -Demqx_private_ip1=${{ needs.terraform_emqx.outputs.emqx_node_ip1 }} \
+          -Demqx_private_ip2=${{ needs.terraform_emqx.outputs.emqx_node_ip2 }} \
+          -Demqx_private_ip3=${{ needs.terraform_emqx.outputs.emqx_node_ip3 }} \
+          -Dmysql_ip=${{ needs.terraform_mysql.outputs.mysql_ip }} \
+          -Dpgsql_ip=${{ needs.terraform_pgsql.outputs.pgsql_ip }} \
+          -Dredis_ip=${{ needs.terraform_redis.outputs.redis_ip }} \
+          -Dmongo_ip=${{ needs.terraform_mongo.outputs.mongo_ip }} \
+          -Dhttp_ip=${{ needs.terraform_webhook.outputs.webhook_ip }} \
           -Dxmeter_ip=${{ secrets.XMETER_IP }} \
           -Dplugins_path="/opt/jmeter/lib/ext" \
           -Dxmeter_user=${{ secrets.XMETER_USER }} \
@@ -473,102 +461,102 @@ jobs:
       if: always()
       with:
         name: jmeter_logs_report
-        path: /home/runner/work/emqx/emqx/jmeter_logs
+        path: ./jmeter_logs
 
-#  terraform_destroy:
-#    runs-on: ubuntu-latest
-#
-#    needs: [master_control]
-#    steps:
-#    - name: Checkout tf-test-automation
-#      uses: actions/checkout@v2
-#      with:
-#        repository: emqx/tf-test-automation
-#        ref: cluster
-#        path: tf-test-automation
-#    - name: Setup Terraform
-#      uses: hashicorp/setup-terraform@v1.3.2
-#      with:
-#        terraform_wrapper: false
-#    - uses: actions/download-artifact@v2
-#      with:
-#        name: tfstate
-#        path: ./tf-test-automation/services
-#    - name: Terraform Init mysql
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp mysql.tfstate ./mysql/terraform.tfstate
-#        cd ./mysql
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy mysql
-#      working-directory: ./tf-test-automation/services/mysql
-#      run: |
-#        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Init emqx
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp emqx.tfstate ./emqx/terraform.tfstate
-#        cd ./emqx
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy emqx
-#      working-directory: ./tf-test-automation/services/emqx
-#      run: |
-#        terraform destroy -auto-approve -var="region=ap-southeast-1" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Init redis
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp redis.tfstate ./redis/terraform.tfstate
-#        cd ./redis
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy redis
-#      working-directory: ./tf-test-automation/services/redis
-#      run: |
-#        terraform destroy -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-#    - name: Terraform Init pgsql
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp pgsql.tfstate ./pgsql/terraform.tfstate
-#        cd ./pgsql
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy pgsql
-#      working-directory: ./tf-test-automation/services/pgsql
-#      run: |
-#        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Init mongo
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp mongo.tfstate ./mongodb/terraform.tfstate
-#        cd ./mongodb
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy mongo
-#      working-directory: ./tf-test-automation/services/mongodb
-#      run: |
-#        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Init Webhook
-#      working-directory: ./tf-test-automation/services
-#      run: |
-#        cp webhook.tfstate ./webhook/terraform.tfstate
-#        cd ./webhook
-#        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#    - name: Terraform Destroy Webhook
-#      working-directory: ./tf-test-automation/services/webhook
-#      run: |
-#        terraform destroy -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
-#
-#  xmeter_stop:
-#    runs-on: ubuntu-latest
-#
-#    needs: [terraform_destroy]
-#    steps:
-#    - name: Configure AWS Credentials
-#      uses: aws-actions/configure-aws-credentials@v1
-#      with:
-#        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}
-#        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}
-#        aws-region: ap-southeast-1
-#    - name: Start Xmeter Services
-#      run: |
-#        aws ec2 stop-instances --instance-ids i-0dd6d99916baaa1a8
-#        aws ec2 stop-instances --instance-ids i-05222103df01eb2d7
-#        aws ec2 stop-instances --instance-ids i-0c5dccd394ed9be18
-#        aws ec2 stop-instances --instance-ids i-04c1c50b3e4952266
+  terraform_destroy:
+    runs-on: ubuntu-latest
+
+    needs: [master_control]
+    steps:
+    - name: Checkout tf-test-automation
+      uses: actions/checkout@v2
+      with:
+        repository: emqx/tf-test-automation
+        ref: cluster
+        path: tf-test-automation
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_wrapper: false
+    - uses: actions/download-artifact@v2
+      with:
+        name: tfstate
+        path: ./tf-test-automation/services
+    - name: Terraform Init mysql
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp mysql.tfstate ./mysql/terraform.tfstate
+        cd ./mysql
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy mysql
+      working-directory: ./tf-test-automation/services/mysql
+      run: |
+        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Init emqx
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp emqx.tfstate ./emqx/terraform.tfstate
+        cd ./emqx
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy emqx
+      working-directory: ./tf-test-automation/services/emqx
+      run: |
+        terraform destroy -auto-approve -var="region=ap-southeast-1" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Init redis
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp redis.tfstate ./redis/terraform.tfstate
+        cd ./redis
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy redis
+      working-directory: ./tf-test-automation/services/redis
+      run: |
+        terraform destroy -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
+    - name: Terraform Init pgsql
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp pgsql.tfstate ./pgsql/terraform.tfstate
+        cd ./pgsql
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy pgsql
+      working-directory: ./tf-test-automation/services/pgsql
+      run: |
+        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Init mongo
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp mongo.tfstate ./mongodb/terraform.tfstate
+        cd ./mongodb
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy mongo
+      working-directory: ./tf-test-automation/services/mongodb
+      run: |
+        terraform destroy -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Init Webhook
+      working-directory: ./tf-test-automation/services
+      run: |
+        cp webhook.tfstate ./webhook/terraform.tfstate
+        cd ./webhook
+        terraform init --backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" --backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+    - name: Terraform Destroy Webhook
+      working-directory: ./tf-test-automation/services/webhook
+      run: |
+        terraform destroy -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}"
+
+  xmeter_stop:
+    runs-on: ubuntu-latest
+
+    needs: [terraform_destroy]
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}
+        aws-region: ap-southeast-1
+    - name: Start Xmeter Services
+      run: |
+        aws ec2 stop-instances --instance-ids i-0dd6d99916baaa1a8
+        aws ec2 stop-instances --instance-ids i-05222103df01eb2d7
+        aws ec2 stop-instances --instance-ids i-0c5dccd394ed9be18
+        aws ec2 stop-instances --instance-ids i-04c1c50b3e4952266

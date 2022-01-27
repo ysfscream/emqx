@@ -210,7 +210,8 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      redis_ip: ${{ steps.redis_ip.outputs.redis_ip }}
+      redis_private_ip: ${{ steps.redis_ip.outputs.redis_private_ips }}
+      redis_public_ip: ${{ steps.redis_ip.outputs.redis_public_ips }}
     steps:
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
@@ -236,7 +237,8 @@ jobs:
       id: redis_ip
       run: |
         terraform apply -auto-approve -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-        echo "::set-output name=redis_ip::$(terraform output redis_private_ips)"
+        echo "::set-output name=redis_private_ip::$(terraform output redis_private_ips)"
+        echo "::set-output name=redis_public_ip::$(terraform output redis_public_ips)"
     - name: Rename and upload redis server tfstate
       working-directory: ./tf-test-automation/services/redis
       run: |
@@ -248,7 +250,8 @@ jobs:
         path: ./tf-test-automation/services/redis/redis.tfstate
     - name: Show redis ip
       run: |
-        echo ${{ steps.redis_ip.outputs.redis_ip }}
+        echo ${{ steps.redis_ip.outputs.redis_private_ip }}
+        echo ${{ steps.redis_ip.outputs.redis_public_ip }}
 
   terraform_pgsql:
     runs-on: ubuntu-latest
@@ -305,7 +308,8 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      mongo_ip: ${{ steps.mongo_ip.outputs.mongo_ip }}
+      mongo_private_ip: ${{ steps.mongo_ip.outputs.mongo_private_ip }}
+      mongo_public_ip: ${{ steps.mongo_ip.outputs.mongo_public_ip }}
     steps:
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
@@ -331,7 +335,8 @@ jobs:
       id: mongo_ip
       run: |
         terraform apply -auto-approve -var="db_password=public123" -var="access_key=${{ secrets.AWS_ACCESS_KEY_ID_FOR_PERFORMANCE_TESTING }}" -var="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_FOR_PERFORMANCE_TESTING }}" -var="private_key=${{ secrets.CI_SSH_PRIVATE_KEY }}"
-        echo "::set-output name=mongo_ip::$(terraform output mongo_private_ips)"
+        echo "::set-output name=mongo_private_ip::$(terraform output mongo_private_ips)"
+        echo "::set-output name=mongo_public_ip::$(terraform output mongo_public_ips)"
     - name: Rename and upload mongo server tfstate
       working-directory: ./tf-test-automation/services/mongodb
       run: |
@@ -343,7 +348,8 @@ jobs:
         path: ./tf-test-automation/services/mongodb/mongo.tfstate
     - name: Show mongo ip
       run: |
-        echo ${{ steps.mongo_ip.outputs.mongo_ip }}
+        echo ${{ steps.mongo_ip.outputs.mongo_private_ip }}
+        echo ${{ steps.mongo_ip.outputs.mongo_public_ip }}
 
   terraform_webhook:
     runs-on: ubuntu-latest
@@ -437,8 +443,10 @@ jobs:
           -Demqx_private_ip3=${{ needs.terraform_emqx.outputs.emqx_node_ip3 }} \
           -Dmysql_ip=${{ needs.terraform_mysql.outputs.mysql_ip }} \
           -Dpgsql_ip=${{ needs.terraform_pgsql.outputs.pgsql_ip }} \
-          -Dredis_ip=${{ needs.terraform_redis.outputs.redis_ip }} \
-          -Dmongo_ip=${{ needs.terraform_mongo.outputs.mongo_ip }} \
+          -Dredis_private_ip=${{ needs.terraform_redis.outputs.redis_private_ip }} \
+          -Dredis_public_ip=${{ needs.terraform_redis.outputs.redis_public_ip }} \
+          -Dmongo_private_ip=${{ needs.terraform_mongo.outputs.mongo_private_ip }} \
+          -Dmongo_public_ip=${{ needs.terraform_mongo.outputs.mongo_public_ip }} \
           -Dhttp_ip=${{ needs.terraform_webhook.outputs.webhook_ip }} \
           -Dxmeter_ip=${{ secrets.XMETER_IP }} \
           -Dplugins_path="/opt/jmeter/lib/ext" \

@@ -98,9 +98,8 @@ jobs:
     - name: Download emqx package
       run: |
         ls -alt /tmp
-        ls -alt /tmp/ubuntu20.04
-        rm -rf /tmp/ubuntu20.04/emqx-5.*.elixir.*.tar.gz
-        mv /tmp/ubuntu20.04/emqx-5.*.tar.gz /tmp/emqx.tar.gz
+        rm -rf /tmp/emqx-5.*-elixir.*.tar.gz
+        mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
         ls /tmp
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2

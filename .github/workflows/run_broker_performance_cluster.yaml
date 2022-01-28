@@ -70,11 +70,11 @@ jobs:
     - name: build and test tgz package (Elixir)
       run: |
         make ${EMQX_NAME}-elixir-tgz
-        .ci/build_packages/tests.sh "$EMQX_ELIXIRPKG_NAME" tgz
+        .ci/build_packages/tests.sh "$EMQX_ELIXIRPKG_NAME" tgz amd64
     - name: build and test deb/rpm packages (Elixir)
       run: |
         make ${EMQX_NAME}-elixirpkg
-        .ci/build_packages/tests.sh "$EMQX_ELIXIRPKG_NAME" pkg
+        .ci/build_packages/tests.sh "$EMQX_ELIXIRPKG_NAME" pkg amd64
     - uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.os }}
@@ -97,7 +97,8 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        mv /tmp/emqx-5.*.amd64.tar.gz /tmp/emqx.tar.gz
+        rm -rf /tmp/emqx-5.*.elixir.*.tar.gz
+        mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
         ls /tmp
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2

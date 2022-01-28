@@ -97,10 +97,11 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        ls -alt /tmp
         rm -rf /tmp/emqx-5.*-elixir.*.tar.gz
-        mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
-        ls /tmp
+        ls
+        mv emqx-5.*.tar.gz emqx.tar.gz
+        ls
+        pwd
     - name: Checkout tf-test-automation
       uses: actions/checkout@v2
       with:

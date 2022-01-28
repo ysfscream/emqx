@@ -97,6 +97,8 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
+        ls -alt /tmp
+        ls -alt /tmp/ubuntu20.04
         rm -rf /tmp/ubuntu20.04/emqx-5.*.elixir.*.tar.gz
         mv /tmp/ubuntu20.04/emqx-5.*.tar.gz /tmp/emqx.tar.gz
         ls /tmp

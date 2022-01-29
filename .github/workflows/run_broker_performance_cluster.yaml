@@ -97,7 +97,7 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        rm -rf /tmp/emqx-5.*.elixir1.13.2.*.tar.gz
+        rm -rf /tmp/emqx-5.*-elixir1.*.tar.gz
         echo "--------------------------"
         ls /tmp
         mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz

@@ -97,10 +97,8 @@ jobs:
         path: /tmp
     - name: Download emqx package
       run: |
-        pwd
-        ls -al
+        rm -rf /tmp/emqx-5.*.elixir1.13.2.*.tar.gz
         echo "--------------------------"
-        rm -rf /tmp/emqx-5.*-elixir.*.tar.gz
         ls /tmp
         mv /tmp/emqx-5.*.tar.gz /tmp/emqx.tar.gz
     - name: Checkout tf-test-automation
